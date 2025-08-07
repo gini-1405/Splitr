@@ -96,12 +96,24 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">
-                  ${balances?.youAreOwed.toFixed(2)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  From {balances?.oweDetails?.youAreOwedBy?.length || 0} people
-                </p>
+                {balances?.oweDetails?.youAreOwed.length > 0 ? (
+                  <>
+                    <div className="text-2xl font-bold text-green-600">
+                      ${balances?.youAreOwed.toFixed(2)}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      From {balances?.oweDetails?.youAreOwedBy?.length || 0}{" "}
+                      people
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold">$0.00</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Nobody owes you
+                    </p>
+                  </>
+                )}
               </CardContent>
             </Card>
 
