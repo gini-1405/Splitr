@@ -1,6 +1,7 @@
 import { query } from "./_generated/server";
 import { internal } from "./_generated/api";
 
+
 // Get user balances
 export const getUserBalances = query({
   handler: async (ctx) => {
@@ -15,25 +16,25 @@ export const getUserBalances = query({
           e.splits.some((s) => s.userId === user._id))
     );
 
-    /* tallies */
-    let youOwe = 0;
-    let youAreOwed = 0;
+    // Balance map: tracks owed and owing per counterparty
     const balanceByUser = {};
 
+    // Process expenses
     for (const e of expenses) {
       const isPayer = e.paidByUserId === user._id;
       const mySplit = e.splits.find((s) => s.userId === user._id);
 
       if (isPayer) {
+        // Others owe me
         for (const s of e.splits) {
           if (s.userId === user._id || s.paid) continue;
-          youAreOwed += s.amount;
-          (balanceByUser[s.userId] ??= { owed: 0, owing: 0 }).owed += s.amount;
+          const entry = (balanceByUser[s.userId] ??= { owed: 0, owing: 0 });
+          entry.owed += s.amount;
         }
       } else if (mySplit && !mySplit.paid) {
-        youOwe += mySplit.amount;
-        (balanceByUser[e.paidByUserId] ??= { owed: 0, owing: 0 }).owing +=
-          mySplit.amount;
+        // I owe others
+        const entry = (balanceByUser[e.paidByUserId] ??= { owed: 0, owing: 0 });
+        entry.owing += mySplit.amount;
       }
     }
 
@@ -46,19 +47,22 @@ export const getUserBalances = query({
 
     for (const s of settlements) {
       if (s.paidByUserId === user._id) {
-        youOwe -= s.amount;
-        (balanceByUser[s.receivedByUserId] ??= { owed: 0, owing: 0 }).owing -=
-          s.amount;
+        // I paid someone
+        const entry = (balanceByUser[s.receivedByUserId] ??= { owed: 0, owing: 0 });
+        entry.owing -= s.amount;
       } else {
-        youAreOwed -= s.amount;
-        (balanceByUser[s.paidByUserId] ??= { owed: 0, owing: 0 }).owed -=
-          s.amount;
+        // Someone paid me
+        const entry = (balanceByUser[s.paidByUserId] ??= { owed: 0, owing: 0 });
+        entry.owed -= s.amount;
       }
     }
 
-    /* build lists for UI */
+    // Build per-user detail lists and compute global nets
     const youOweList = [];
     const youAreOwedByList = [];
+    let youOwe = 0;
+    let youAreOwed = 0;
+
     for (const [uid, { owed, owing }] of Object.entries(balanceByUser)) {
       const net = owed - owing;
       if (net === 0) continue;
@@ -69,9 +73,16 @@ export const getUserBalances = query({
         imageUrl: counterpart?.imageUrl,
         amount: Math.abs(net),
       };
-      net > 0 ? youAreOwedByList.push(base) : youOweList.push(base);
+      if (net > 0) {
+        youAreOwedByList.push(base);
+        youAreOwed += net;
+      } else {
+        youOweList.push(base);
+        youOwe += -net;
+      }
     }
 
+    // Sort detail lists by amount descending
     youOweList.sort((a, b) => b.amount - a.amount);
     youAreOwedByList.sort((a, b) => b.amount - a.amount);
 
