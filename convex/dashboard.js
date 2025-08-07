@@ -2,6 +2,7 @@ import { query } from "./_generated/server";
 import { internal } from "./_generated/api";
 
 
+
 // Get user balances
 export const getUserBalances = query({
   handler: async (ctx) => {
@@ -65,7 +66,8 @@ export const getUserBalances = query({
 
     for (const [uid, { owed, owing }] of Object.entries(balanceByUser)) {
       const net = owed - owing;
-      if (net === 0) continue;
+      // Skip any net that is effectively zero (to avoid showing ±$0.00)
+      if (Math.abs(net) < 1e-6) continue;
       const counterpart = await ctx.db.get(uid);
       const base = {
         userId: uid,
@@ -94,6 +96,9 @@ export const getUserBalances = query({
     };
   },
 });
+
+
+
 
 // Get total spent in the current year
 export const getTotalSpent = query({
