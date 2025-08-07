@@ -96,7 +96,7 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {balances?.oweDetails?.youAreOwed.length > 0 ? (
+                {balances?.oweDetails?.youAreOwed?.length > 0 ? (
                   <>
                     <div className="text-2xl font-bold text-green-600">
                       ${balances?.youAreOwed.toFixed(2)}
